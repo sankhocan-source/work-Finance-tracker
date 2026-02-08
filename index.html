@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Work Schedule Tracker Pro</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+body{font-family:Inter,sans-serif;background:linear-gradient(135deg,#0f0f1e,#1a1a2e);color:#fff}
+.card{background:rgba(255,255,255,.08);backdrop-filter:blur(10px);border-radius:16px;padding:20px}
+</style>
+</head>
+<body class="min-h-screen p-6">
+<div class="max-w-5xl mx-auto space-y-6">
+
+<h1 class="text-3xl font-bold">Work Schedule Tracker – Pro Demo</h1>
+
+<div class="card flex justify-between items-center">
+<div class="flex gap-2">
+<button onclick="resetCurrent()" class="bg-yellow-500 px-4 py-2 rounded">Reset Current Shift</button>
+</div>
+<div id="userInfo" class="text-sm opacity-80">Not logged in</div>
+<div class="flex gap-2">
+<button onclick="googleLogin()" class="bg-indigo-500 px-4 py-2 rounded">Login with Google</button>
+<button onclick="logout()" class="bg-red-500 px-4 py-2 rounded">Logout</button>
+</div>
+</div>
+
+<div class="grid md:grid-cols-3 gap-4">
+<div class="card text-center"><p class="opacity-70">Total Shifts</p><p id="totalShifts" class="text-2xl font-bold">0</p></div>
+<div class="card text-center"><p class="opacity-70">Total Time</p><p id="totalTime" class="text-2xl font-bold">00:00:00</p></div>
+<div class="card text-center"><p class="opacity-70">Today Time</p><p id="todayTime" class="text-2xl font-bold">00:00:00</p></div>
+</div>
+
+<div id="active" class="card hidden">
+<h2 class="font-semibold">Active Shift</h2>
+<div class="text-4xl mt-2" id="timer">00:00:00</div>
+<button onclick="endShift()" class="mt-4 bg-red-500 px-5 py-2 rounded">End Shift</button>
+</div>
+
+<div class="card">
+<div class="flex gap-2">
+<input id="shiftName" placeholder="Shift name" class="flex-1 p-2 rounded bg-white/10" />
+<button onclick="startShift()" class="bg-green-500 px-4 py-2 rounded">Start</button>
+</div>
+</div>
+
+<div class="card">
+<h2 class="font-semibold mb-3">Shift History</h2>
+<ul id="history" class="space-y-2"></ul>
+</div>
+
+<div class="card">
+<h2 class="font-semibold mb-3">Charts & Export</h2>
+<canvas id="chart" class="w-full h-40 bg-white/5 rounded mb-4"></canvas>
+<div class="flex gap-2">
+<button onclick="exportExcel()" class="bg-indigo-500 px-4 py-2 rounded">Export Excel</button>
+<button onclick="exportPDF()" class="bg-pink-500 px-4 py-2 rounded">Export PDF</button>
+</div>
+</div>
+
+<div class="card">
+<h2 class="font-semibold mb-3">Monthly Report</h2>
+<div id="report" class="text-sm opacity-80"></div>
+</div>
+
+</div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// TODO: REPLACE WITH YOUR FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "YOUR_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "ID",
+  appId: "APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+window.googleLogin = async () => {
+ const result = await signInWithPopup(auth, provider);
+};
+
+window.logout = async () => {
+ await signOut(auth);
+};
+
+onAuthStateChanged(auth, async (user)=>{
+ if(user){
+  document.getElementById('userInfo').innerText = `Logged in: ${user.email}`;
+  const snap = await getDoc(doc(db,'users',user.uid));
+  if(snap.exists()){
+    shifts = snap.data().shifts || [];
+    render();
+  }
+ }else{
+  document.getElementById('userInfo').innerText = 'Not logged in';
+ }
+});
+
+// ----- APP LOGIC -----
+let startTime=null,interval=null;
+window.shifts = JSON.parse(localStorage.getItem('shifts')||'[]');
+
+function save(){
+ localStorage.setItem('shifts',JSON.stringify(shifts));
+ if(auth.currentUser){
+   setDoc(doc(db,'users',auth.currentUser.uid),{shifts});
+ }
+}
+
+window.format = function(ms){
+ let s=Math.floor(ms/1000);
+ let h=String(Math.floor(s/3600)).padStart(2,'0');
+ let m=String(Math.floor(s%3600/60)).padStart(2,'0');
+ let sec=String(s%60).padStart(2,'0');
+ return `${h}:${m}:${sec}`;
+}
+
+window.startShift=function(){
+ const name=document.getElementById('shiftName').value||'Work';
+ startTime=Date.now();
+ document.getElementById('active').classList.remove('hidden');
+ interval=setInterval(()=>{
+  document.getElementById('timer').innerText=format(Date.now()-startTime);
+ },1000);
+ document.getElementById('shiftName').dataset.name=name;
+}
+
+window.endShift=function(){
+ clearInterval(interval);
+ const name=document.getElementById('shiftName').dataset.name;
+ const duration=Date.now()-startTime;
+ shifts.push({name,duration,date:new Date().toISOString()});
+ save();
+ document.getElementById('active').classList.add('hidden');
+ render();
+}
+
+window.render=function(){
+ const h=document.getElementById('history');
+ h.innerHTML='';
+ let total=0,today=0;
+ const todayStr=new Date().toDateString();
+ shifts.slice().reverse().forEach(s=>{
+  total+=s.duration;
+  if(new Date(s.date).toDateString()===todayStr) today+=s.duration;
+  const li=document.createElement('li');
+  li.className='p-2 bg-white/10 rounded';
+  li.innerText=`${s.name} — ${format(s.duration)}`;
+  h.appendChild(li);
+ });
+ document.getElementById('totalShifts').innerText=shifts.length;
+ document.getElementById('totalTime').innerText=format(total);
+ document.getElementById('todayTime').innerText=format(today);
+
+ const month=new Date().getMonth();
+ let mtotal=0;
+ shifts.forEach(s=>{if(new Date(s.date).getMonth()===month) mtotal+=s.duration});
+ document.getElementById('report').innerText=`This month total: ${format(mtotal)}`;
+ drawChart();
+}
+
+window.drawChart=function(){
+ const c=document.getElementById('chart');
+ if(!c) return;
+ const ctx=c.getContext('2d');
+ c.width=c.offsetWidth; c.height=160;
+ ctx.clearRect(0,0,c.width,c.height);
+ let days={};
+ shifts.forEach(s=>{let d=new Date(s.date).getDate();days[d]=(days[d]||0)+s.duration});
+ let max=Math.max(...Object.values(days),1);
+ let i=0;
+ for(let d in days){
+  let h=(days[d]/max)*(c.height-20);
+  ctx.fillStyle='#8b5cf6';
+  ctx.fillRect(20+i*30,c.height-h,20,h);
+  ctx.fillStyle='#fff';
+  ctx.fillText(d,24+i*30,c.height-5);
+  i++;
+ }
+}
+
+window.exportExcel=function(){
+ let csv='Name,Duration,Date\n';
+ shifts.forEach(s=>csv+=`${s.name},${format(s.duration)},${s.date}\n`);
+ let blob=new Blob([csv],{type:'text/csv'});
+ let a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);
+ a.download='work_report.csv';
+ a.click();
+}
+
+window.exportPDF=function(){window.print();}
+
+// ---- RESET CURRENT SHIFT (SAFE RESET) ----
+window.resetCurrent=function(){
+ if(startTime===null){
+   alert('No active shift to reset. Start a shift first.');
+   return;
+ }
+ if(!confirm('Reset current running shift timer? Completed shifts will stay.')) return;
+ clearInterval(interval);
+ startTime = Date.now();
+ interval = setInterval(()=>{
+  document.getElementById('timer').innerText = format(Date.now()-startTime);
+ },1000);
+ document.getElementById('timer').innerText = '00:00:00';
+};
+
+render();
+}
+
+// Add sample demo data for first-time users
+if(shifts.length===0){
+ shifts.push(
+  {name:'Demo Shift',duration:1800000,date:new Date().toISOString()},
+  {name:'Test Work',duration:2400000,date:new Date(Date.now()-86400000).toISOString()}
+ );
+ save();
+}
+();}
+
+render();
+</script>
+</body>
+</html>
+
