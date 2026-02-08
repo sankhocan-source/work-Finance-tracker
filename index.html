@@ -19,10 +19,10 @@ body{font-family:Inter,sans-serif;background:linear-gradient(135deg,#0f0f1e,#1a1
 
 <h1 class="text-3xl font-bold">Work Schedule Tracker – Pro</h1>
 
-<div class="card flex flex-col sm:flex-row gap-3 justify-between">
-<button onclick="resetCurrent()" class="bg-yellow-500 px-4 py-2 rounded">Reset Current Shift</button>
+<div class="card flex flex-col sm:flex-row gap-3 justify-between items-center">
+<button onclick="resetCurrent()" class="bg-yellow-500 px-4 py-2 rounded w-full sm:w-auto">Reset Current Shift</button>
 <div id="userInfo" class="opacity-80">Not logged in</div>
-<div class="flex gap-2">
+<div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
 <button onclick="googleLogin()" class="bg-indigo-500 px-4 py-2 rounded">Google Login</button>
 <button onclick="logout()" class="bg-red-500 px-4 py-2 rounded">Logout</button>
 </div>
@@ -35,18 +35,18 @@ body{font-family:Inter,sans-serif;background:linear-gradient(135deg,#0f0f1e,#1a1
 </div>
 
 <div class="card">
-<h2 class="mb-2">Productivity</h2>
+<h2 class="mb-2 font-semibold">Productivity</h2>
 <div class="grid grid-cols-3 text-center gap-3">
-<div><p>Score</p><p id="productivityScore">0%</p></div>
-<div><p>Streak</p><p id="streakCount">0 🔥</p></div>
-<div><p>Reward</p><p id="nextReward">Start</p></div>
+<div><p class="opacity-70">Score</p><p id="productivityScore">0%</p></div>
+<div><p class="opacity-70">Streak</p><p id="streakCount">0 🔥</p></div>
+<div><p class="opacity-70">Reward</p><p id="nextReward">Start</p></div>
 </div>
 </div>
 
 <div id="active" class="card hidden">
-<h2>Active Shift</h2>
+<h2 class="font-semibold">Active Shift</h2>
 <div id="timer" class="text-4xl">00:00:00</div>
-<div class="flex gap-2 mt-3 flex-wrap">
+<div class="flex flex-wrap gap-2 mt-3">
 <button onclick="pauseShift()" class="bg-blue-500 px-3 py-1 rounded">Pause</button>
 <button onclick="resumeShift()" class="bg-green-500 px-3 py-1 rounded">Resume</button>
 <button onclick="resetCurrent()" class="bg-yellow-500 px-3 py-1 rounded">Reset</button>
@@ -55,70 +55,37 @@ body{font-family:Inter,sans-serif;background:linear-gradient(135deg,#0f0f1e,#1a1
 </div>
 
 <div class="card">
-<div class="flex gap-2 flex-wrap">
+<div class="flex flex-col sm:flex-row gap-2">
 <input id="shiftName" placeholder="Shift name" class="flex-1 p-2 rounded bg-white/10"/>
 <button onclick="startShift()" class="bg-green-500 px-4 py-2 rounded">Start Shift</button>
 </div>
 </div>
 
 <div class="card">
-<h2>Pre-Book Shift</h2>
-<div class="flex gap-2">
-<input type="time" id="prebookTime" class="p-2 rounded bg-white/10 flex-1"/>
+<h2 class="font-semibold">Pre-Book Shift (Up to 2 Days Ahead)</h2>
+<div class="flex flex-col sm:flex-row gap-2">
+<input type="datetime-local" id="prebookTime" class="p-2 rounded bg-white/10 flex-1"/>
 <button onclick="bookShift()" class="bg-purple-500 px-4 py-2 rounded">Book</button>
 </div>
 </div>
 
 <div class="card">
-<h2>Shift History</h2>
+<h2 class="font-semibold">Shift History</h2>
 <ul id="history" class="space-y-2"></ul>
 </div>
 
 <div class="card">
-<h2>Charts</h2>
+<h2 class="font-semibold">Charts</h2>
 <canvas id="chart" class="w-full h-40 bg-white/10 rounded"></canvas>
 </div>
 
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-const firebaseConfig = {
- apiKey: "AIzaSyC6Luetvvg88KkrNvfJkaakTdwzBY8g3T4",
- authDomain: "work-and-finance-tracker.firebaseapp.com",
- projectId: "work-and-finance-tracker",
- storageBucket: "work-and-finance-tracker.appspot.com",
- messagingSenderId: "215242435368",
- appId: "1:215242435368:web:f9c3c521faf5db7e893e1d"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
-
+<script>
 let shifts = JSON.parse(localStorage.getItem("shifts")||"[]");
 let startTime=null,interval=null,paused=false,pausedAt=0;
 
-const save=()=>{
- localStorage.setItem("shifts",JSON.stringify(shifts));
- if(auth.currentUser) setDoc(doc(db,"users",auth.currentUser.uid),{shifts});
-};
-
-window.googleLogin=()=>signInWithPopup(auth,provider);
-window.logout=()=>signOut(auth);
-
-onAuthStateChanged(auth,async u=>{
- if(u){
-  userInfo.innerText="Logged: "+u.email;
-  const s=await getDoc(doc(db,"users",u.uid));
-  if(s.exists()) shifts=s.data().shifts||[];
-  render();
- } else userInfo.innerText="Not logged in";
-});
+const save=()=>localStorage.setItem("shifts",JSON.stringify(shifts));
 
 const format=ms=>{
  let s=Math.floor(ms/1000);
@@ -128,68 +95,83 @@ const format=ms=>{
  return `${h}:${m}:${sc}`;
 };
 
-window.startShift=()=>{
+function startShift(){
  clearInterval(interval);
  paused=false;
  startTime=Date.now();
  active.classList.remove("hidden");
  interval=setInterval(()=>timer.innerText=format(Date.now()-startTime),1000);
-};
+}
 
-window.pauseShift=()=>{
- if(paused)return;
+function pauseShift(){
+ if(paused) return;
  paused=true; pausedAt=Date.now(); clearInterval(interval);
-};
+}
 
-window.resumeShift=()=>{
- if(!paused)return;
+function resumeShift(){
+ if(!paused) return;
  startTime+=Date.now()-pausedAt;
  paused=false;
  interval=setInterval(()=>timer.innerText=format(Date.now()-startTime),1000);
-};
+}
 
-window.resetCurrent=()=>{
- if(!startTime)return;
+function resetCurrent(){
+ if(!startTime) return;
  startTime=Date.now(); timer.innerText="00:00:00";
-};
+}
 
-window.endShift=()=>{
+function endShift(){
  clearInterval(interval);
  shifts.push({name:shiftName.value||"Work",duration:Date.now()-startTime,date:new Date().toISOString()});
  save(); active.classList.add("hidden"); render(); notify("Saved","Nice work!");
-};
+}
 
-window.render=()=>{
+function render(){
  history.innerHTML="";
- let total=0,today=0;
- let t=new Date().toDateString();
- shifts.slice().reverse().forEach((s,i)=>{
+ let total=0,today=0,todayStr=new Date().toDateString();
+
+ shifts.slice().reverse().forEach((s,idx)=>{
+  let i=shifts.length-1-idx;
   total+=s.duration;
-  if(new Date(s.date).toDateString()===t) today+=s.duration;
-  history.innerHTML+=`<li class="flex justify-between bg-white/10 p-2 rounded">
-  <span>${s.name} — ${format(s.duration)}</span>
-  <span>
-   <button onclick="editShift(${i})">✏️</button>
-   <button onclick="deleteShift(${i})">🗑</button>
-  </span></li>`;
+  if(new Date(s.date).toDateString()===todayStr) today+=s.duration;
+
+  history.innerHTML+=`
+   <li class="flex justify-between bg-white/10 p-2 rounded">
+    <span>${s.name} — ${format(s.duration)}</span>
+    <span class="flex gap-2">
+     <button onclick="editShift(${i})">✏️</button>
+     <button onclick="deleteShift(${i})">🗑</button>
+    </span>
+   </li>`;
  });
+
  totalShifts.innerText=shifts.length;
  totalTime.innerText=format(total);
  todayTime.innerText=format(today);
  calcStats();
  drawChart();
-};
+}
 
-window.editShift=i=>{
- let n=prompt("Edit name",shifts[i].name);
- if(n){shifts[i].name=n;save();render();}
-};
+function editShift(i){
+ let s=shifts[i];
+ let name=prompt("Edit name",s.name);
+ let mins=prompt("Edit duration (minutes)",Math.round(s.duration/60000));
+ let date=prompt("Edit date (YYYY-MM-DD HH:MM)",s.date.replace("T"," ").slice(0,16));
+ if(name&&mins&&date){
+  s.name=name;
+  s.duration=Number(mins)*60000;
+  s.date=new Date(date.replace(" ","T")).toISOString();
+  save(); render();
+ }
+}
 
-window.deleteShift=i=>{
- if(confirm("Delete?")){shifts.splice(i,1);save();render();}
-};
+function deleteShift(i){
+ if(confirm("Delete this shift?")){
+  shifts.splice(i,1); save(); render();
+ }
+}
 
-window.drawChart=()=>{
+function drawChart(){
  const c=chart,ctx=c.getContext("2d");
  c.width=c.offsetWidth;c.height=160;
  ctx.clearRect(0,0,c.width,c.height);
@@ -202,41 +184,38 @@ window.drawChart=()=>{
   ctx.fillRect(20+i*30,c.height-h,20,h);
   i++;
  }
-};
+}
 
 function calcStats(){
  let today=new Date().toDateString(),ms=0;
  shifts.forEach(s=>{if(new Date(s.date).toDateString()===today)ms+=s.duration});
  let hrs=ms/3600000;
  productivityScore.innerText=Math.min(100,Math.round(hrs/8*100))+"%";
- let streak=Number(localStorage.getItem("streak")||0);
- streakCount.innerText=streak+" 🔥";
- if(hrs>=2)nextReward.innerText="🥉 Bronze";
- if(hrs>=4)nextReward.innerText="🥈 Silver";
- if(hrs>=6)nextReward.innerText="🥇 Gold";
- if(hrs>=8)nextReward.innerText="🏆 Champion";
+ streakCount.innerText=Math.floor(hrs)+" 🔥";
+ nextReward.innerText=hrs>=8?"🏆 Champion":hrs>=6?"🥇 Gold":hrs>=4?"🥈 Silver":hrs>=2?"🥉 Bronze":"Start";
 }
 
-function notify(t,b){
- if(Notification.permission==="granted")new Notification(t,{body:b});
+function bookShift(){
+ let v=prebookTime.value;
+ if(!v) return alert("Pick date & time");
+ let diff=(new Date(v)-Date.now())/86400000;
+ if(diff>2) return alert("Only up to 2 days ahead allowed");
+ localStorage.setItem("bookedShift",v);
+ alert("Shift booked!");
 }
-
-window.bookShift=()=>{
- let t=prebookTime.value;
- localStorage.setItem("booked",t);
-};
 
 setInterval(()=>{
- let b=localStorage.getItem("booked");
- if(!b)return;
- let [h,m]=b.split(":");
- let now=new Date();
- let trg=new Date(); trg.setHours(h,m,0,0);
- let diff=(trg-now)/60000;
- if(diff<30&&diff>29)notify("Upcoming Shift","Starts in 30 minutes");
+ let b=localStorage.getItem("bookedShift");
+ if(!b) return;
+ let diff=(new Date(b)-Date.now())/60000;
+ if(diff<30&&diff>29) notify("Upcoming Shift","Starts in 30 minutes");
 },30000);
 
-if("Notification"in window)Notification.requestPermission();
+function notify(t,b){
+ if(Notification.permission==="granted") new Notification(t,{body:b});
+}
+
+if("Notification"in window) Notification.requestPermission();
 
 render();
 </script>
