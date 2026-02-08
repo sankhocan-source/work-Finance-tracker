@@ -18,7 +18,7 @@ body{font-family:Inter,sans-serif;background:linear-gradient(135deg,#0f0f1e,#1a1
 <body class="min-h-screen">
 <div class="max-w-5xl mx-auto space-y-6 px-4 sm:px-6 lg:px-0 py-6">
 
-<h1 class="text-3xl font-bold">Work Schedule Tracker – Pro Demo</h1>
+<h1 class="text-3xl font-bold">Work Schedule Tracker – Pro</h1>
 
 <div class="card flex flex-col sm:flex-row justify-between items-center gap-3">
 <button onclick="resetCurrent()" class="bg-yellow-500 px-4 py-2 rounded w-full sm:w-auto">Reset Current Shift</button>
@@ -40,13 +40,19 @@ body{font-family:Inter,sans-serif;background:linear-gradient(135deg,#0f0f1e,#1a1
 <div id="active" class="card hidden">
 <h2 class="font-semibold">Active Shift</h2>
 <div class="text-4xl mt-2" id="timer">00:00:00</div>
-<button onclick="endShift()" class="mt-4 bg-red-500 px-5 py-2 rounded w-full sm:w-auto">End Shift</button>
+
+<div class="flex flex-col sm:flex-row gap-2 mt-4">
+<button onclick="pauseShift()" class="bg-blue-500 px-4 py-2 rounded">Pause</button>
+<button onclick="resumeShift()" class="bg-green-500 px-4 py-2 rounded">Resume</button>
+<button onclick="resetCurrent()" class="bg-yellow-500 px-4 py-2 rounded">Reset</button>
+<button onclick="endShift()" class="bg-red-500 px-4 py-2 rounded">End</button>
+</div>
 </div>
 
 <div class="card">
 <div class="flex flex-col sm:flex-row gap-2">
 <input id="shiftName" placeholder="Shift name" class="flex-1 p-2 rounded bg-white/10" />
-<button onclick="startShift()" class="bg-green-500 px-4 py-2 rounded w-full sm:w-auto">Start</button>
+<button onclick="startShift()" class="bg-green-500 px-4 py-2 rounded w-full sm:w-auto">Start Shift</button>
 </div>
 </div>
 
@@ -60,8 +66,8 @@ body{font-family:Inter,sans-serif;background:linear-gradient(135deg,#0f0f1e,#1a1
 <canvas id="chart" class="w-full h-48 sm:h-40 bg-white/5 rounded mb-4"></canvas>
 
 <div class="flex flex-col sm:flex-row gap-2">
-<button onclick="exportExcel()" class="bg-indigo-500 px-4 py-2 rounded w-full sm:w-auto">Export Excel</button>
-<button onclick="exportPDF()" class="bg-pink-500 px-4 py-2 rounded w-full sm:w-auto">Export PDF</button>
+<button onclick="exportExcel()" class="bg-indigo-500 px-4 py-2 rounded">Export Excel</button>
+<button onclick="exportPDF()" class="bg-pink-500 px-4 py-2 rounded">Export PDF</button>
 </div>
 </div>
 
@@ -72,7 +78,6 @@ body{font-family:Inter,sans-serif;background:linear-gradient(135deg,#0f0f1e,#1a1
 
 </div>
 
-<!-- Firebase + App -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -92,7 +97,14 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-window.googleLogin = async () => signInWithPopup(auth, provider);
+window.googleLogin = async () => {
+ try{
+  await signInWithPopup(auth, provider);
+ }catch(e){
+  alert("Login failed: " + e.message);
+ }
+};
+
 window.logout = async () => signOut(auth);
 
 onAuthStateChanged(auth, async (user)=>{
@@ -103,7 +115,7 @@ onAuthStateChanged(auth, async (user)=>{
  } else userInfo.innerText='Not logged in';
 });
 
-let startTime=null,interval=null;
+let startTime=null,interval=null,paused=false,pausedAt=0;
 window.shifts = JSON.parse(localStorage.getItem('shifts')||'[]');
 
 function save(){
@@ -111,7 +123,7 @@ function save(){
  if(auth.currentUser) setDoc(doc(db,'users',auth.currentUser.uid),{shifts});
 }
 
-window.format=(ms)=>{
+const format=(ms)=>{
  let s=Math.floor(ms/1000);
  let h=String(Math.floor(s/3600)).padStart(2,'0');
  let m=String(Math.floor(s%3600/60)).padStart(2,'0');
@@ -121,11 +133,32 @@ window.format=(ms)=>{
 
 window.startShift=()=>{
  clearInterval(interval);
+ paused=false;
  const name=shiftName.value||'Work';
  startTime=Date.now();
  active.classList.remove('hidden');
  shiftName.dataset.name=name;
  interval=setInterval(()=>timer.innerText=format(Date.now()-startTime),1000);
+};
+
+window.pauseShift=()=>{
+ if(!startTime||paused) return;
+ paused=true;
+ pausedAt=Date.now();
+ clearInterval(interval);
+};
+
+window.resumeShift=()=>{
+ if(!paused) return;
+ startTime+=Date.now()-pausedAt;
+ paused=false;
+ interval=setInterval(()=>timer.innerText=format(Date.now()-startTime),1000);
+};
+
+window.resetCurrent=()=>{
+ if(!startTime) return alert("Start a shift first");
+ startTime=Date.now();
+ timer.innerText="00:00:00";
 };
 
 window.endShift=()=>{
@@ -137,28 +170,43 @@ window.endShift=()=>{
  render();
 };
 
-window.resetCurrent=()=>{
- if(!startTime) return alert('Start a shift first.');
- startTime=Date.now();
- timer.innerText='00:00:00';
-};
-
 window.render=()=>{
  drawChart();
  history.innerHTML='';
  let total=0,today=0;
  const t=new Date().toDateString();
- shifts.slice().reverse().forEach(s=>{
+ shifts.slice().reverse().forEach((s,i)=>{
   total+=s.duration;
   if(new Date(s.date).toDateString()===t) today+=s.duration;
-  history.innerHTML+=`<li class="p-2 bg-white/10 rounded">${s.name} — ${format(s.duration)}</li>`;
+
+  history.innerHTML+=`
+   <li class="p-2 bg-white/10 rounded flex justify-between items-center">
+    <span>${s.name} — ${format(s.duration)}</span>
+    <div class="flex gap-2">
+     <button onclick="editShift(${i})" class="text-yellow-400">✏️</button>
+     <button onclick="deleteShift(${i})" class="text-red-400">🗑</button>
+    </div>
+   </li>`;
  });
+
  totalShifts.innerText=shifts.length;
  totalTime.innerText=format(total);
  todayTime.innerText=format(today);
+
  let m=0,mo=new Date().getMonth();
  shifts.forEach(s=>{if(new Date(s.date).getMonth()===mo)m+=s.duration});
  report.innerText=`This month total: ${format(m)}`;
+};
+
+window.editShift=(i)=>{
+ const name=prompt("Edit shift name:",shifts[i].name);
+ if(name){shifts[i].name=name;save();render();}
+};
+
+window.deleteShift=(i)=>{
+ if(confirm("Delete this shift?")){
+  shifts.splice(i,1);save();render();
+ }
 };
 
 window.drawChart=()=>{
@@ -183,18 +231,10 @@ window.exportExcel=()=>{
  shifts.forEach(s=>csv+=`${s.name},${format(s.duration)},${s.date}\n`);
  let a=document.createElement('a');
  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
- a.download='work_report.csv'; a.click();
+ a.download='work_report.csv';a.click();
 };
 
 window.exportPDF=()=>window.print();
-
-if(shifts.length===0){
- shifts.push(
-  {name:'Demo Shift',duration:1800000,date:new Date().toISOString()},
-  {name:'Test Work',duration:2400000,date:new Date(Date.now()-86400000).toISOString()}
- );
- save();
-}
 
 render();
 </script>
