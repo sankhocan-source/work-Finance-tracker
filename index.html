@@ -188,8 +188,8 @@ window.render = () => {
  let total = 0, today = 0;
  let t = new Date().toDateString();
 
- const fd = filterDate?.value;
- const ft = filterTime?.value;
+ const fd = document.getElementById("filterDate")?.value;
+ const ft = document.getElementById("filterTime")?.value;
 
  let list = shifts.map((s, i) => ({ ...s, _i: i }));
 
@@ -206,6 +206,7 @@ window.render = () => {
    if (ft === "afternoon") return h >= 12 && h < 17;
    if (ft === "evening") return h >= 17 && h < 21;
    if (ft === "night") return h >= 21 || h < 5;
+   return true;
   });
  }
 
@@ -296,3 +297,4 @@ render();
 
 </body>
 </html>
+
