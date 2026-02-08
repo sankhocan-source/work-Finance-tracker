@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Work Schedule Tracker Pro</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
@@ -11,69 +11,72 @@
 <style>
 body{font-family:Inter,sans-serif;background:linear-gradient(135deg,#0f0f1e,#1a1a2e);color:#fff}
 .card{background:rgba(255,255,255,.08);backdrop-filter:blur(10px);border-radius:16px;padding:20px}
-@media(max-width:640px){.card{width:100%}}
 </style>
 </head>
 
 <body class="min-h-screen">
-<div class="max-w-5xl mx-auto space-y-6 px-4 sm:px-6 lg:px-0 py-6">
+<div class="max-w-5xl mx-auto space-y-6 px-4 py-6">
 
 <h1 class="text-3xl font-bold">Work Schedule Tracker – Pro</h1>
 
-<div class="card flex flex-col sm:flex-row justify-between items-center gap-3">
-<button onclick="resetCurrent()" class="bg-yellow-500 px-4 py-2 rounded w-full sm:w-auto">Reset Current Shift</button>
-
-<div id="userInfo" class="text-sm opacity-80">Not logged in</div>
-
-<div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-<button onclick="googleLogin()" class="bg-indigo-500 px-4 py-2 rounded w-full sm:w-auto">Login with Google</button>
-<button onclick="logout()" class="bg-red-500 px-4 py-2 rounded w-full sm:w-auto">Logout</button>
+<div class="card flex flex-col sm:flex-row gap-3 justify-between">
+<button onclick="resetCurrent()" class="bg-yellow-500 px-4 py-2 rounded">Reset Current Shift</button>
+<div id="userInfo" class="opacity-80">Not logged in</div>
+<div class="flex gap-2">
+<button onclick="googleLogin()" class="bg-indigo-500 px-4 py-2 rounded">Google Login</button>
+<button onclick="logout()" class="bg-red-500 px-4 py-2 rounded">Logout</button>
 </div>
 </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-<div class="card text-center"><p class="opacity-70">Total Shifts</p><p id="totalShifts" class="text-2xl font-bold">0</p></div>
-<div class="card text-center"><p class="opacity-70">Total Time</p><p id="totalTime" class="text-2xl font-bold">00:00:00</p></div>
-<div class="card text-center"><p class="opacity-70">Today Time</p><p id="todayTime" class="text-2xl font-bold">00:00:00</p></div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+<div class="card text-center"><p>Total Shifts</p><p id="totalShifts" class="text-2xl">0</p></div>
+<div class="card text-center"><p>Total Time</p><p id="totalTime" class="text-2xl">00:00:00</p></div>
+<div class="card text-center"><p>Today Time</p><p id="todayTime" class="text-2xl">00:00:00</p></div>
+</div>
+
+<div class="card">
+<h2 class="mb-2">Productivity</h2>
+<div class="grid grid-cols-3 text-center gap-3">
+<div><p>Score</p><p id="productivityScore">0%</p></div>
+<div><p>Streak</p><p id="streakCount">0 🔥</p></div>
+<div><p>Reward</p><p id="nextReward">Start</p></div>
+</div>
 </div>
 
 <div id="active" class="card hidden">
-<h2 class="font-semibold">Active Shift</h2>
-<div class="text-4xl mt-2" id="timer">00:00:00</div>
-
-<div class="flex flex-col sm:flex-row gap-2 mt-4">
-<button onclick="pauseShift()" class="bg-blue-500 px-4 py-2 rounded">Pause</button>
-<button onclick="resumeShift()" class="bg-green-500 px-4 py-2 rounded">Resume</button>
-<button onclick="resetCurrent()" class="bg-yellow-500 px-4 py-2 rounded">Reset</button>
-<button onclick="endShift()" class="bg-red-500 px-4 py-2 rounded">End</button>
+<h2>Active Shift</h2>
+<div id="timer" class="text-4xl">00:00:00</div>
+<div class="flex gap-2 mt-3 flex-wrap">
+<button onclick="pauseShift()" class="bg-blue-500 px-3 py-1 rounded">Pause</button>
+<button onclick="resumeShift()" class="bg-green-500 px-3 py-1 rounded">Resume</button>
+<button onclick="resetCurrent()" class="bg-yellow-500 px-3 py-1 rounded">Reset</button>
+<button onclick="endShift()" class="bg-red-500 px-3 py-1 rounded">End</button>
 </div>
 </div>
 
 <div class="card">
-<div class="flex flex-col sm:flex-row gap-2">
-<input id="shiftName" placeholder="Shift name" class="flex-1 p-2 rounded bg-white/10" />
-<button onclick="startShift()" class="bg-green-500 px-4 py-2 rounded w-full sm:w-auto">Start Shift</button>
+<div class="flex gap-2 flex-wrap">
+<input id="shiftName" placeholder="Shift name" class="flex-1 p-2 rounded bg-white/10"/>
+<button onclick="startShift()" class="bg-green-500 px-4 py-2 rounded">Start Shift</button>
 </div>
 </div>
 
 <div class="card">
-<h2 class="font-semibold mb-3">Shift History</h2>
+<h2>Pre-Book Shift</h2>
+<div class="flex gap-2">
+<input type="time" id="prebookTime" class="p-2 rounded bg-white/10 flex-1"/>
+<button onclick="bookShift()" class="bg-purple-500 px-4 py-2 rounded">Book</button>
+</div>
+</div>
+
+<div class="card">
+<h2>Shift History</h2>
 <ul id="history" class="space-y-2"></ul>
 </div>
 
 <div class="card">
-<h2 class="font-semibold mb-3">Charts & Export</h2>
-<canvas id="chart" class="w-full h-48 sm:h-40 bg-white/5 rounded mb-4"></canvas>
-
-<div class="flex flex-col sm:flex-row gap-2">
-<button onclick="exportExcel()" class="bg-indigo-500 px-4 py-2 rounded">Export Excel</button>
-<button onclick="exportPDF()" class="bg-pink-500 px-4 py-2 rounded">Export PDF</button>
-</div>
-</div>
-
-<div class="card">
-<h2 class="font-semibold mb-3">Monthly Report</h2>
-<div id="report" class="text-sm opacity-80"></div>
+<h2>Charts</h2>
+<canvas id="chart" class="w-full h-40 bg-white/10 rounded"></canvas>
 </div>
 
 </div>
@@ -84,12 +87,12 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC6Luetvvg88KkrNvfJkaakTdwzBY8g3T4",
-  authDomain: "work-and-finance-tracker.firebaseapp.com",
-  projectId: "work-and-finance-tracker",
-  storageBucket: "work-and-finance-tracker.firebasestorage.app",
-  messagingSenderId: "215242435368",
-  appId: "1:215242435368:web:f9c3c521faf5db7e893e1d"
+ apiKey: "AIzaSyC6Luetvvg88KkrNvfJkaakTdwzBY8g3T4",
+ authDomain: "work-and-finance-tracker.firebaseapp.com",
+ projectId: "work-and-finance-tracker",
+ storageBucket: "work-and-finance-tracker.appspot.com",
+ messagingSenderId: "215242435368",
+ appId: "1:215242435368:web:f9c3c521faf5db7e893e1d"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -97,144 +100,143 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-window.googleLogin = async () => {
- try{
-  await signInWithPopup(auth, provider);
- }catch(e){
-  alert("Login failed: " + e.message);
- }
+let shifts = JSON.parse(localStorage.getItem("shifts")||"[]");
+let startTime=null,interval=null,paused=false,pausedAt=0;
+
+const save=()=>{
+ localStorage.setItem("shifts",JSON.stringify(shifts));
+ if(auth.currentUser) setDoc(doc(db,"users",auth.currentUser.uid),{shifts});
 };
 
-window.logout = async () => signOut(auth);
+window.googleLogin=()=>signInWithPopup(auth,provider);
+window.logout=()=>signOut(auth);
 
-onAuthStateChanged(auth, async (user)=>{
- if(user){
-  userInfo.innerText = `Logged in: ${user.email}`;
-  const snap = await getDoc(doc(db,'users',user.uid));
-  if(snap.exists()){ shifts = snap.data().shifts || []; render(); }
- } else userInfo.innerText='Not logged in';
+onAuthStateChanged(auth,async u=>{
+ if(u){
+  userInfo.innerText="Logged: "+u.email;
+  const s=await getDoc(doc(db,"users",u.uid));
+  if(s.exists()) shifts=s.data().shifts||[];
+  render();
+ } else userInfo.innerText="Not logged in";
 });
 
-let startTime=null,interval=null,paused=false,pausedAt=0;
-window.shifts = JSON.parse(localStorage.getItem('shifts')||'[]');
-
-function save(){
- localStorage.setItem('shifts',JSON.stringify(shifts));
- if(auth.currentUser) setDoc(doc(db,'users',auth.currentUser.uid),{shifts});
-}
-
-const format=(ms)=>{
+const format=ms=>{
  let s=Math.floor(ms/1000);
  let h=String(Math.floor(s/3600)).padStart(2,'0');
  let m=String(Math.floor(s%3600/60)).padStart(2,'0');
- let sec=String(s%60).padStart(2,'0');
- return `${h}:${m}:${sec}`;
+ let sc=String(s%60).padStart(2,'0');
+ return `${h}:${m}:${sc}`;
 };
 
 window.startShift=()=>{
  clearInterval(interval);
  paused=false;
- const name=shiftName.value||'Work';
  startTime=Date.now();
- active.classList.remove('hidden');
- shiftName.dataset.name=name;
+ active.classList.remove("hidden");
  interval=setInterval(()=>timer.innerText=format(Date.now()-startTime),1000);
 };
 
 window.pauseShift=()=>{
- if(!startTime||paused) return;
- paused=true;
- pausedAt=Date.now();
- clearInterval(interval);
+ if(paused)return;
+ paused=true; pausedAt=Date.now(); clearInterval(interval);
 };
 
 window.resumeShift=()=>{
- if(!paused) return;
+ if(!paused)return;
  startTime+=Date.now()-pausedAt;
  paused=false;
  interval=setInterval(()=>timer.innerText=format(Date.now()-startTime),1000);
 };
 
 window.resetCurrent=()=>{
- if(!startTime) return alert("Start a shift first");
- startTime=Date.now();
- timer.innerText="00:00:00";
+ if(!startTime)return;
+ startTime=Date.now(); timer.innerText="00:00:00";
 };
 
 window.endShift=()=>{
  clearInterval(interval);
- const duration=Date.now()-startTime;
- shifts.push({name:shiftName.dataset.name,duration,date:new Date().toISOString()});
- save();
- active.classList.add('hidden');
- render();
+ shifts.push({name:shiftName.value||"Work",duration:Date.now()-startTime,date:new Date().toISOString()});
+ save(); active.classList.add("hidden"); render(); notify("Saved","Nice work!");
 };
 
 window.render=()=>{
- drawChart();
- history.innerHTML='';
+ history.innerHTML="";
  let total=0,today=0;
- const t=new Date().toDateString();
+ let t=new Date().toDateString();
  shifts.slice().reverse().forEach((s,i)=>{
   total+=s.duration;
   if(new Date(s.date).toDateString()===t) today+=s.duration;
-
-  history.innerHTML+=`
-   <li class="p-2 bg-white/10 rounded flex justify-between items-center">
-    <span>${s.name} — ${format(s.duration)}</span>
-    <div class="flex gap-2">
-     <button onclick="editShift(${i})" class="text-yellow-400">✏️</button>
-     <button onclick="deleteShift(${i})" class="text-red-400">🗑</button>
-    </div>
-   </li>`;
+  history.innerHTML+=`<li class="flex justify-between bg-white/10 p-2 rounded">
+  <span>${s.name} — ${format(s.duration)}</span>
+  <span>
+   <button onclick="editShift(${i})">✏️</button>
+   <button onclick="deleteShift(${i})">🗑</button>
+  </span></li>`;
  });
-
  totalShifts.innerText=shifts.length;
  totalTime.innerText=format(total);
  todayTime.innerText=format(today);
-
- let m=0,mo=new Date().getMonth();
- shifts.forEach(s=>{if(new Date(s.date).getMonth()===mo)m+=s.duration});
- report.innerText=`This month total: ${format(m)}`;
+ calcStats();
+ drawChart();
 };
 
-window.editShift=(i)=>{
- const name=prompt("Edit shift name:",shifts[i].name);
- if(name){shifts[i].name=name;save();render();}
+window.editShift=i=>{
+ let n=prompt("Edit name",shifts[i].name);
+ if(n){shifts[i].name=n;save();render();}
 };
 
-window.deleteShift=(i)=>{
- if(confirm("Delete this shift?")){
-  shifts.splice(i,1);save();render();
- }
+window.deleteShift=i=>{
+ if(confirm("Delete?")){shifts.splice(i,1);save();render();}
 };
 
 window.drawChart=()=>{
- const c=chart,ctx=c.getContext('2d');
- c.width=c.offsetWidth; c.height=160;
+ const c=chart,ctx=c.getContext("2d");
+ c.width=c.offsetWidth;c.height=160;
  ctx.clearRect(0,0,c.width,c.height);
- let days={},max=1,i=0;
- shifts.forEach(s=>{let d=new Date(s.date).getDate();days[d]=(days[d]||0)+s.duration});
- max=Math.max(...Object.values(days),1);
- for(let d in days){
-  let h=(days[d]/max)*(c.height-20);
-  ctx.fillStyle='#8b5cf6';
+ let d={},i=0;
+ shifts.forEach(s=>{let k=new Date(s.date).getDate();d[k]=(d[k]||0)+s.duration});
+ let m=Math.max(...Object.values(d),1);
+ for(let k in d){
+  let h=d[k]/m*(c.height-20);
+  ctx.fillStyle="#8b5cf6";
   ctx.fillRect(20+i*30,c.height-h,20,h);
-  ctx.fillStyle='#fff';
-  ctx.fillText(d,24+i*30,c.height-5);
   i++;
  }
 };
 
-window.exportExcel=()=>{
- let csv='Name,Duration,Date\n';
- shifts.forEach(s=>csv+=`${s.name},${format(s.duration)},${s.date}\n`);
- let a=document.createElement('a');
- a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
- a.download='work_report.csv';a.click();
+function calcStats(){
+ let today=new Date().toDateString(),ms=0;
+ shifts.forEach(s=>{if(new Date(s.date).toDateString()===today)ms+=s.duration});
+ let hrs=ms/3600000;
+ productivityScore.innerText=Math.min(100,Math.round(hrs/8*100))+"%";
+ let streak=Number(localStorage.getItem("streak")||0);
+ streakCount.innerText=streak+" 🔥";
+ if(hrs>=2)nextReward.innerText="🥉 Bronze";
+ if(hrs>=4)nextReward.innerText="🥈 Silver";
+ if(hrs>=6)nextReward.innerText="🥇 Gold";
+ if(hrs>=8)nextReward.innerText="🏆 Champion";
+}
+
+function notify(t,b){
+ if(Notification.permission==="granted")new Notification(t,{body:b});
+}
+
+window.bookShift=()=>{
+ let t=prebookTime.value;
+ localStorage.setItem("booked",t);
 };
 
-window.exportPDF=()=>window.print();
+setInterval(()=>{
+ let b=localStorage.getItem("booked");
+ if(!b)return;
+ let [h,m]=b.split(":");
+ let now=new Date();
+ let trg=new Date(); trg.setHours(h,m,0,0);
+ let diff=(trg-now)/60000;
+ if(diff<30&&diff>29)notify("Upcoming Shift","Starts in 30 minutes");
+},30000);
+
+if("Notification"in window)Notification.requestPermission();
 
 render();
 </script>
