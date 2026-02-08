@@ -188,27 +188,27 @@ window.render = () => {
  let total = 0, today = 0;
  let t = new Date().toDateString();
 
- const fd = document.getElementById("filterDate")?.value;
- const ft = document.getElementById("filterTime")?.value;
+const fd = document.getElementById("filterDate")?.value;
+const ft = document.getElementById("filterTime")?.value;
 
- let list = shifts.map((s, i) => ({ ...s, _i: i }));
+let list = shifts.map((s, i) => ({ ...s, _i: i }));
 
- if (fd) {
-  list = list.filter(s =>
-   new Date(s.date).toISOString().slice(0, 10) === fd
-  );
- }
+if (fd) {
+list = list.filter(s =>
+new Date(s.date).toLocaleDateString('en-CA') === fd
+ );
+}
 
- if (ft) {
-  list = list.filter(s => {
-   const h = new Date(s.date).getHours();
-   if (ft === "morning") return h >= 5 && h < 12;
-   if (ft === "afternoon") return h >= 12 && h < 17;
-   if (ft === "evening") return h >= 17 && h < 21;
-   if (ft === "night") return h >= 21 || h < 5;
-   return true;
-  });
- }
+if (ft) {
+ list = list.filter(s => {
+  const h = new Date(s.date).getHours();
+  if (ft === "morning") return h >= 5 && h < 12;
+  if (ft === "afternoon") return h >= 12 && h < 17;
+  if (ft === "evening") return h >= 17 && h < 21;
+  if (ft === "night") return h >= 21 || h < 5;
+  return true;
+ });
+}
 
  shifts.forEach(s => {
   total += s.duration;
@@ -297,4 +297,5 @@ render();
 
 </body>
 </html>
+
 
