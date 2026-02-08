@@ -62,9 +62,10 @@ body{font-family:Inter,sans-serif;background:linear-gradient(135deg,#0f0f1e,#1a1
 </div>
 
 <div class="card">
-<h2>Pre-Book Shift</h2>
-<div class="flex gap-2">
-<input type="time" id="prebookTime" class="p-2 rounded bg-white/10 flex-1"/>
+<h2>Pre-Book Shift (Next 2 Days)</h2>
+<div class="flex gap-2 flex-wrap">
+<input type="date" id="prebookDate" class="p-2 rounded bg-white/10"/>
+<input type="time" id="prebookTime" class="p-2 rounded bg-white/10"/>
 <button onclick="bookShift()" class="bg-purple-500 px-4 py-2 rounded">Book</button>
 </div>
 </div>
@@ -156,7 +157,7 @@ window.resetCurrent=()=>{
 window.endShift=()=>{
  clearInterval(interval);
  shifts.push({name:shiftName.value||"Work",duration:Date.now()-startTime,date:new Date().toISOString()});
- save(); active.classList.add("hidden"); render(); notify("Saved","Nice work!");
+ save(); active.classList.add("hidden"); render();
 };
 
 window.render=()=>{
@@ -166,27 +167,36 @@ window.render=()=>{
  shifts.slice().reverse().forEach((s,i)=>{
   total+=s.duration;
   if(new Date(s.date).toDateString()===t) today+=s.duration;
-  history.innerHTML+=`<li class="flex justify-between bg-white/10 p-2 rounded">
-  <span>${s.name} — ${format(s.duration)}</span>
-  <span>
-   <button onclick="editShift(${i})">✏️</button>
-   <button onclick="deleteShift(${i})">🗑</button>
-  </span></li>`;
+  history.innerHTML+=`
+  <li class="flex justify-between bg-white/10 p-2 rounded">
+   <span>${s.name} — ${format(s.duration)}</span>
+   <span class="flex gap-2">
+    <button onclick="editShift(${i})">✏️</button>
+    <button onclick="deleteShift(${i})">🗑</button>
+   </span>
+  </li>`;
  });
  totalShifts.innerText=shifts.length;
  totalTime.innerText=format(total);
  todayTime.innerText=format(today);
- calcStats();
  drawChart();
 };
 
 window.editShift=i=>{
- let n=prompt("Edit name",shifts[i].name);
- if(n){shifts[i].name=n;save();render();}
+ let n=prompt("Edit shift name",shifts[i].name);
+ if(n===null) return;
+ let mins=prompt("Edit duration (minutes)",Math.round(shifts[i].duration/60000));
+ if(mins===null) return;
+ shifts[i].name=n;
+ shifts[i].duration=Number(mins)*60000;
+ save(); render();
 };
 
 window.deleteShift=i=>{
- if(confirm("Delete?")){shifts.splice(i,1);save();render();}
+ if(confirm("Delete this shift?")){
+  shifts.splice(i,1);
+  save(); render();
+ }
 };
 
 window.drawChart=()=>{
@@ -204,39 +214,32 @@ window.drawChart=()=>{
  }
 };
 
-function calcStats(){
- let today=new Date().toDateString(),ms=0;
- shifts.forEach(s=>{if(new Date(s.date).toDateString()===today)ms+=s.duration});
- let hrs=ms/3600000;
- productivityScore.innerText=Math.min(100,Math.round(hrs/8*100))+"%";
- let streak=Number(localStorage.getItem("streak")||0);
- streakCount.innerText=streak+" 🔥";
- if(hrs>=2)nextReward.innerText="🥉 Bronze";
- if(hrs>=4)nextReward.innerText="🥈 Silver";
- if(hrs>=6)nextReward.innerText="🥇 Gold";
- if(hrs>=8)nextReward.innerText="🏆 Champion";
-}
-
-function notify(t,b){
- if(Notification.permission==="granted")new Notification(t,{body:b});
-}
-
 window.bookShift=()=>{
- let t=prebookTime.value;
- localStorage.setItem("booked",t);
+ const d=prebookDate.value;
+ const t=prebookTime.value;
+ if(!d||!t) return alert("Select date & time");
+
+ const now=new Date();
+ const sel=new Date(d+"T"+t);
+ const diff=(sel-now)/(1000*60*60*24);
+
+ if(diff<0 || diff>2) return alert("Only next 2 days allowed");
+
+ localStorage.setItem("bookedShift",sel.toISOString());
+ alert("Shift booked!");
 };
 
 setInterval(()=>{
- let b=localStorage.getItem("booked");
- if(!b)return;
- let [h,m]=b.split(":");
- let now=new Date();
- let trg=new Date(); trg.setHours(h,m,0,0);
- let diff=(trg-now)/60000;
- if(diff<30&&diff>29)notify("Upcoming Shift","Starts in 30 minutes");
+ const b=localStorage.getItem("bookedShift");
+ if(!b) return;
+ const trg=new Date(b);
+ const diff=(trg-new Date())/60000;
+ if(diff<30 && diff>29 && Notification.permission==="granted"){
+  new Notification("Upcoming Shift","Starts in 30 minutes");
+ }
 },30000);
 
-if("Notification"in window)Notification.requestPermission();
+if("Notification"in window) Notification.requestPermission();
 
 render();
 </script>
