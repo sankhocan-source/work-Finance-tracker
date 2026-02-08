@@ -34,15 +34,6 @@ body{font-family:Inter,sans-serif;background:linear-gradient(135deg,#0f0f1e,#1a1
 <div class="card text-center"><p>Today Time</p><p id="todayTime" class="text-2xl">00:00:00</p></div>
 </div>
 
-<div class="card">
-<h2 class="mb-2">Productivity</h2>
-<div class="grid grid-cols-3 text-center gap-3">
-<div><p>Score</p><p id="productivityScore">0%</p></div>
-<div><p>Streak</p><p id="streakCount">0 🔥</p></div>
-<div><p>Reward</p><p id="nextReward">Start</p></div>
-</div>
-</div>
-
 <div id="active" class="card hidden">
 <h2>Active Shift</h2>
 <div id="timer" class="text-4xl">00:00:00</div>
@@ -71,7 +62,20 @@ body{font-family:Inter,sans-serif;background:linear-gradient(135deg,#0f0f1e,#1a1
 </div>
 
 <div class="card">
-<h2>Shift History</h2>
+<h2 class="mb-2">Shift History</h2>
+
+<div class="flex gap-2 mb-3 flex-wrap">
+ <input type="date" id="filterDate" class="p-2 rounded bg-white/10">
+ <select id="filterTime" class="p-2 rounded bg-white/10">
+  <option value="">All Time</option>
+  <option value="morning">Morning (5–12)</option>
+  <option value="afternoon">Afternoon (12–17)</option>
+  <option value="evening">Evening (17–21)</option>
+  <option value="night">Night (21–5)</option>
+ </select>
+ <button onclick="render()" class="bg-indigo-500 px-3 py-1 rounded">Apply</button>
+</div>
+
 <ul id="history" class="space-y-2"></ul>
 </div>
 
@@ -112,13 +116,32 @@ const save=()=>{
 window.googleLogin=()=>signInWithPopup(auth,provider);
 window.logout=()=>signOut(auth);
 
-onAuthStateChanged(auth,async u=>{
- if(u){
-  userInfo.innerText="Logged: "+u.email;
-  const s=await getDoc(doc(db,"users",u.uid));
-  if(s.exists()) shifts=s.data().shifts||[];
-  render();
- } else userInfo.innerText="Not logged in";
+onAuthStateChanged(auth, async user => {
+ if (!user) {
+  userInfo.innerText = "Not logged in";
+  return;
+ }
+
+ userInfo.innerText = "Logged: " + user.email;
+
+ const ref = doc(db, "users", user.uid);
+ const snap = await getDoc(ref);
+
+ if (snap.exists()) {
+  const cloudShifts = snap.data().shifts || [];
+  const local = shifts || [];
+
+  const merged = [...cloudShifts, ...local].filter(
+   (v, i, a) => a.findIndex(t => t.date === v.date && t.name === v.name) === i
+  );
+
+  shifts = merged;
+  save();
+ } else {
+  await setDoc(ref, { shifts });
+ }
+
+ render();
 });
 
 const format=ms=>{
@@ -160,25 +183,52 @@ window.endShift=()=>{
  save(); active.classList.add("hidden"); render();
 };
 
-window.render=()=>{
- history.innerHTML="";
- let total=0,today=0;
- let t=new Date().toDateString();
- shifts.slice().reverse().forEach((s,i)=>{
-  total+=s.duration;
-  if(new Date(s.date).toDateString()===t) today+=s.duration;
-  history.innerHTML+=`
+window.render = () => {
+ history.innerHTML = "";
+ let total = 0, today = 0;
+ let t = new Date().toDateString();
+
+ const fd = filterDate?.value;
+ const ft = filterTime?.value;
+
+ let list = shifts.map((s, i) => ({ ...s, _i: i }));
+
+ if (fd) {
+  list = list.filter(s =>
+   new Date(s.date).toISOString().slice(0, 10) === fd
+  );
+ }
+
+ if (ft) {
+  list = list.filter(s => {
+   const h = new Date(s.date).getHours();
+   if (ft === "morning") return h >= 5 && h < 12;
+   if (ft === "afternoon") return h >= 12 && h < 17;
+   if (ft === "evening") return h >= 17 && h < 21;
+   if (ft === "night") return h >= 21 || h < 5;
+  });
+ }
+
+ shifts.forEach(s => {
+  total += s.duration;
+  if (new Date(s.date).toDateString() === t) today += s.duration;
+ });
+
+ list.reverse().forEach(s => {
+  history.innerHTML += `
   <li class="flex justify-between bg-white/10 p-2 rounded">
    <span>${s.name} — ${format(s.duration)}</span>
    <span class="flex gap-2">
-    <button onclick="editShift(${i})">✏️</button>
-    <button onclick="deleteShift(${i})">🗑</button>
+    <button onclick="editShift(${s._i})">✏️</button>
+    <button onclick="deleteShift(${s._i})">🗑</button>
    </span>
   </li>`;
  });
- totalShifts.innerText=shifts.length;
- totalTime.innerText=format(total);
- todayTime.innerText=format(today);
+
+ totalShifts.innerText = shifts.length;
+ totalTime.innerText = format(total);
+ todayTime.innerText = format(today);
+
  drawChart();
 };
 
